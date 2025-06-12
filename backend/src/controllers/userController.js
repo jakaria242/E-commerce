@@ -1,0 +1,79 @@
+import verifyEmailTemplate from "../mailTemplate/verifyEmailTemplate.js";
+import { User } from "../models/userSchema.js";
+import { ApiError } from "../utils/ApiError.js"
+import {  ApiResponse } from "../utils/ApiResponse.js"
+import { mail } from "../utils/sendMail.js";
+
+ const emailpattern = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|.(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+
+
+ // @desc create a user
+// route POST /api/v1/user/registration
+const createUser = async (req,res)=> {
+try {
+      const { displayName, email, password } = req.body;
+      if (req.body.hasOwnProperty("displayName") && req.body.hasOwnProperty("email") && req.body.hasOwnProperty("password")) {
+
+         if ([displayName, email, password].some((field) => field?.trim() === "")) {
+      return res.json(new ApiError(400,"All fields are required"));
+      }
+        if(!emailpattern.test(email)){
+        return res.json("Invalid email")
+        }
+      } else {
+         return res.json(new ApiError(500,"invalid fields"));
+      }
+
+      const existingUser = await User.findOne({email})
+      if (existingUser) {
+         return res.json(new ApiError(400,"user alredy exist"));
+      }
+
+      const user = await User.create({displayName, email, password})
+      const link = await user.generateAccessToken()
+      await mail(user.email,"verification", 'Verify your mail',verifyEmailTemplate(link))
+      
+      
+} catch (error) {
+    console.log("createUser error", error.message)
+     return res.json(new ApiError(500, "Internal Server Erro", error.message));
+}
+}
+
+
+// @desc User email verify
+const emailVerify = async (req, res) => {
+  try {
+    const { link } = req.params
+    const user = new User()
+    const token = await user.verifyAccessToken(link)
+    if (token) {
+      const userFound = await User.findOne({ email: token.email })
+      if (userFound) {
+        if (userFound.emailVerified) {
+          return res.json('Your email is all ready verified!')
+        }
+        userFound.emailVerified = new Date().toDateString()
+        await userFound.save()
+        return res.json('Your email has been verified!')
+      } else {
+        return res
+          .status(400)
+          .json(ApiResponse(400, 'User verification failed!'))
+      }
+    } else {
+      return res.status(400).json(ApiResponse(400, 'Invalid verification url'))
+    }
+  } catch (error) {
+    console.log('emailVerify error', error)
+    return res
+      .status(500)
+      .json(ApiResponse(500, 'emailVerify error', { error: error.message }))
+  }
+}
+
+
+export {
+    createUser,
+    emailVerify,
+}
