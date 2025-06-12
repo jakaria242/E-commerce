@@ -7,6 +7,25 @@ import { mail } from "../utils/sendMail.js";
  const emailpattern = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|.(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
 
 
+ // token generator start =================================
+const generateTokens = async (id) => {
+    try {
+      const user = await User.findById({ _id: id })
+      const accessToken = await user.generateAccessToken()
+      const refreshToken = await user.generateRefreshToken()
+      // update user with refreshToken
+      user.refreshToken = refreshToken
+      await user.save()
+      return { accessToken, refreshToken }
+    } catch (error) {
+      console.log('generateTokens error: ', error)
+      return res.json(new ApiResponse(500, 'generateTokens error', { error: error.message }))
+    }
+  }
+  // token generator end =================================
+
+
+
  // @desc create a user
 // route POST /api/v1/user/registration
 const createUser = async (req,res)=> {
@@ -32,6 +51,8 @@ try {
       const user = await User.create({displayName, email, password})
       const link = await user.generateAccessToken()
       await mail(user.email,"verification", 'Verify your mail',verifyEmailTemplate(link))
+
+      return res.json(new ApiResponse(200, "user create sucessful", {user}));
       
       
 } catch (error) {
@@ -73,7 +94,62 @@ const emailVerify = async (req, res) => {
 }
 
 
+// @desc login a user
+// route POST /api/v1/login
+const login = async (req, res) => {
+    try {
+      const { email, password } = req.body
+  
+      // Check if email and password fields are provided
+      if (
+        req.body.hasOwnProperty('email') &&
+        req.body.hasOwnProperty('password')
+      ) {
+        if ([email, password].some((field) => field?.trim() === '')) {
+          return res.status(400).json( new ApiError(400, 'all fields are required', error.message))
+        }
+      } else {
+        return res.status(400).json(new ApiError (400, 'invalid'))
+      }
+  
+      // Find user by email
+      const userFound = await User.findOne({ email })
+      if (!userFound) {
+        return res.status(400).json(new ApiError(400, 'email or pasword invalid'))
+      }
+  
+      // Check if the email is verified
+      if (!userFound.emailVerified) {
+        return res
+          .status(403)
+          .send('Email not verified. Please verify your email first.')
+      }
+
+      // Validate password
+      const isPasswordCorrect = await userFound.isPasswordCorrect(password)
+      if (!isPasswordCorrect) {
+        return res.status(403).send('Email and Password are invalid')
+      }
+  
+  
+    //   // Generate access and refresh tokens
+      const { accessToken, refreshToken } = await generateTokens(userFound._id)
+      
+      return res.json(
+        new ApiResponse(200, 'login successfull', {
+          accessToken: accessToken,
+          refreshToken: refreshToken,
+        })
+      )
+    } catch (error) {
+      console.log('login error', error)
+      return res.json(new ApiResponse(500, 'login error', { error: error.message }))
+    }
+  }
+
+
 export {
     createUser,
     emailVerify,
+    login,
 }

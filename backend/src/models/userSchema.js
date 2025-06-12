@@ -98,14 +98,14 @@ userSchema.methods.isPasswordCorrect = async function (password) {
 
 // generate accessToken and refreshToken start ===============================
 userSchema.methods.generateAccessToken =  function () {
-    const accessToken = jwt.sign({ _id:this._id, displayName:this.displayName, email:this.email }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: process.env.ACCESS_TOKEN_EXPIRY});
-    return accessToken;
+    return jwt.sign({ _id:this._id, displayName:this.displayName, email:this.email }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: process.env.ACCESS_TOKEN_EXPIRY});
+     
 }
 
 
 userSchema.methods.generateRefreshToken =  function () {
-    const refreshToken = jwt.sign({ _id:this._id, email:this.email }, process.env.REFRESH_TOKEN_SECRET, { expiresIn: process.env.REFRESH__TOKEN_EXPIRY});
-    return refreshToken;
+    return jwt.sign({ _id:this._id, email:this.email }, process.env.REFRESH_TOKEN_SECRET, { expiresIn: process.env.REFRESH_TOKEN_EXPIRY});
+    
 }
 // generate accessToken and refreshToken end ===============================
 
