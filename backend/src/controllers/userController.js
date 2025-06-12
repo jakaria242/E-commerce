@@ -3,6 +3,7 @@ import { User } from "../models/userSchema.js";
 import { ApiError } from "../utils/ApiError.js"
 import {  ApiResponse } from "../utils/ApiResponse.js"
 import { mail } from "../utils/sendMail.js";
+import { cloudinaryUpload } from '../services/cloudinary.js'
 
  const emailpattern = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|.(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
 
@@ -80,16 +81,16 @@ const emailVerify = async (req, res) => {
       } else {
         return res
           .status(400)
-          .json(ApiResponse(400, 'User verification failed!'))
+          .json(new ApiError(400, 'User verification failed!'))
       }
     } else {
-      return res.status(400).json(ApiResponse(400, 'Invalid verification url'))
+      return res.status(400).json(new ApiError(400, 'Invalid verification url'))
     }
   } catch (error) {
     console.log('emailVerify error', error)
     return res
       .status(500)
-      .json(ApiResponse(500, 'emailVerify error', { error: error.message }))
+      .json(new ApiError(500, 'emailVerify error', { error: error.message }))
   }
 }
 
@@ -148,8 +149,58 @@ const login = async (req, res) => {
   }
 
 
+  // @desc create a profileImage
+// route POST /api/v1/user/update
+const userUpdate = async (req, res) => {
+  console.log(req.user, "44");
+    try {
+      // check file uploaded or not
+      if (req.file) {
+        const { path } = req.file
+        const user = await User.findById(req.user._id)
+        if (user) {
+          const result = await cloudinaryUpload(
+            path,
+            user.displayName,
+            'profileImage'
+          )
+  
+          // cloudinaryImage.optimizeUrl || cloudinaryImage.uploadResult || cloudinaryImage.uploadResult.public_id
+          user.profileImage = result.optimizeUrl
+          user.publicId = result.uploadResult.public_id
+          await user.save()
+          return res.json(new ApiResponse(200, 'avatar uploded', { user }))
+        }
+      }
+    } catch (error) {
+      console.log('user update error', error)
+      return res
+        .status(500)
+        .json(new ApiResponse(500, 'user update error', { error: error.message }))
+    }
+  }
+
+
+  // @desc logout user
+// route POST /api/v1/user/logout
+const logout = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id)
+    user.refreshToken = null
+    await user.save()
+    return res.status(200).json(new ApiResponse(200, 'logout successfull'))
+  } catch (error) {
+    console.log('logout error', error)
+    return res
+      .status(500)
+      .json(new ApiResponse(500, 'logout error', { error: error.message }))
+  }
+}
+
 export {
     createUser,
     emailVerify,
     login,
+    userUpdate,
+    logout
 }

@@ -32,7 +32,10 @@ const userSchema = new Schema({
         unique:true,
         trim: true
     },
-    photo: {
+    profileImage: {
+        type: String,
+    },
+    publicId:{
         type: String,
     },
     emailVerified: {
@@ -98,13 +101,13 @@ userSchema.methods.isPasswordCorrect = async function (password) {
 
 // generate accessToken and refreshToken start ===============================
 userSchema.methods.generateAccessToken =  function () {
-    return jwt.sign({ _id:this._id, displayName:this.displayName, email:this.email }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: process.env.ACCESS_TOKEN_EXPIRY});
+    return jwt.sign({ _id:this._id, displayName:this.displayName, email:this.email, role:this.role }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: process.env.ACCESS_TOKEN_EXPIRY});
      
 }
 
 
 userSchema.methods.generateRefreshToken =  function () {
-    return jwt.sign({ _id:this._id, email:this.email }, process.env.REFRESH_TOKEN_SECRET, { expiresIn: process.env.REFRESH_TOKEN_EXPIRY});
+    return jwt.sign({ _id:this._id, email:this.email, role:this.role }, process.env.REFRESH_TOKEN_SECRET, { expiresIn: process.env.REFRESH_TOKEN_EXPIRY});
     
 }
 // generate accessToken and refreshToken end ===============================
