@@ -119,18 +119,18 @@ const login = async (req, res) => {
         return res.status(400).json(new ApiError(400, 'email or pasword invalid'))
       }
   
-      // Check if the email is verified
-      if (!userFound.emailVerified) {
-        return res
-          .status(403)
-          .send('Email not verified. Please verify your email first.')
-      }
-
       // Validate password
       const isPasswordCorrect = await userFound.isPasswordCorrect(password)
       if (!isPasswordCorrect) {
         return res.status(403).send('Email and Password are invalid')
       }
+
+            // Check if the email is verified
+            if (!userFound.emailVerified) {
+              return res
+                .status(403)
+                .send('Email not verified. Please verify your email first.')
+            }
   
   
     //   // Generate access and refresh tokens
