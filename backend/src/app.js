@@ -16,9 +16,11 @@ app.use(express.static("public"));
 // all router =====
 import userRoute from "./routes/userRoute.js"
 import categoryRoute from "./routes/categoryRoute.js"
+import subCategoryRoute from "./routes/subCategoryRoute.js"
 
 app.use("/api/v1", userRoute)
 app.use("/api/v1", categoryRoute)
+app.use("/api/v1", subCategoryRoute)
 
 export{ app }
 
